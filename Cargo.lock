@@ -470,6 +470,7 @@ dependencies = [
  "actix-web",
  "env_logger",
  "log",
+ "mime",
 ]
 
 [[package]]

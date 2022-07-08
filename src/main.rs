@@ -1,9 +1,9 @@
 use actix_files::Files;
-use actix_web::{get, middleware, web, App, HttpServer, Responder};
+use actix_web::{get, middleware, App, HttpServer, Responder};
 
-#[get("/")]
-async fn greet(name: web::Path<String>) -> impl Responder {
-    format!("Hello {name}!")
+#[get("/persons")]
+async fn greet() -> impl Responder {
+    actix_files::NamedFile::open_async("./db.json").await
 }
 
 #[actix_web::main] // or #[tokio::main]
@@ -15,6 +15,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .wrap(middleware::Compress::default())
+            .service(greet)
             .service(Files::new("/", "./static/build/").index_file("index.html"))
     })
     .bind(("127.0.0.1", 8082))?
