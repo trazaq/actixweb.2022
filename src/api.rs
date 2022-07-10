@@ -1,15 +1,8 @@
 use actix_files::NamedFile;
-//use actix_session::Session;
-use actix_web::{
-    dev, error, http, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Responder, Result,
-};
-use log::debug;
-//use serde::{Deserialize, Serialize};
+use actix_web::{dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result};
 use sqlx::SqlitePool;
-//use tera::{Context, Tera};
 
 use crate::db;
-use crate::model::User;
 
 pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let users = db::get_all_users(&pool)

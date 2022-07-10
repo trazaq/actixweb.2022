@@ -25,21 +25,21 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("starting HTTP server at http://localhost:8082");
 
-    HttpServer::new(|| {
-       /* let error_handlers = ErrorHandlers::new()
+    HttpServer::new(move || {
+        let error_handlers = ErrorHandlers::new()
             .handler(
                 http::StatusCode::INTERNAL_SERVER_ERROR,
                 api::internal_server_error,
             )
             .handler(http::StatusCode::BAD_REQUEST, api::bad_request)
-            .handler(http::StatusCode::NOT_FOUND, api::not_found);*/
+            .handler(http::StatusCode::NOT_FOUND, api::not_found);
 
         App::new()
             .wrap(middleware::Compress::default())
             .wrap(Logger::default())
-            //.wrap(error_handlers)
+            .app_data(web::Data::new(pool.clone()))
+            .wrap(error_handlers)
             .service(web::resource("/persons").route(web::get().to(api::index)))
-            .service(Files::new("/static", "./static"))
             .service(Files::new("/", "./static/build").index_file("index.html"))
 
     })
