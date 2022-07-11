@@ -4,7 +4,7 @@ mod model;
 
 use actix_files::Files;
 use actix_web::middleware::{ErrorHandlers, Logger};
-use actix_web::{get, middleware, web, http, App, HttpServer, Responder};
+use actix_web::{get, http, middleware, web, App, HttpServer, Responder};
 use dotenv::dotenv;
 use std::env;
 
@@ -41,7 +41,6 @@ async fn main() -> std::io::Result<()> {
             .wrap(error_handlers)
             .service(web::resource("/persons").route(web::get().to(api::index)))
             .service(Files::new("/", "./static/build").index_file("index.html"))
-
     })
     .bind(("127.0.0.1", 8082))?
     .run()

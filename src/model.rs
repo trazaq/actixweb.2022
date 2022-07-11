@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct User {
-    pub id: i64,
+    pub id: String,
     pub name: String,
     pub phone: String,
 }
@@ -14,7 +14,7 @@ impl User {
             User,
             r#"
             SELECT *
-            FROM users
+            FROM users;
             "#
         )
         .fetch_all(connection)
