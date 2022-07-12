@@ -18,3 +18,9 @@ pub async fn add_user(pool: &SqlitePool, user: User) -> Result<Vec<User>, &'stat
         .await
         .map_err(|_| "Error adding user")
 }
+
+pub async fn delete_user(pool: &SqlitePool, id: String) -> Result<(), &'static str> {
+    User::delete_user(pool, id)
+        .await
+        .map_err(|_| "Error adding user")
+}

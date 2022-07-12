@@ -26,6 +26,18 @@ pub async fn add_user(
     Ok(HttpResponse::Ok().json(users))
 }
 
+pub async fn delete_user(
+    pool: web::Data<SqlitePool>,
+    path: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let id = path.into_inner();
+    let _deleted = db::delete_user(&pool, id)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 /*#[derive(Deserialize)]
 pub struct CreateForm {
     description: String,

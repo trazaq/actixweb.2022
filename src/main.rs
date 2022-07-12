@@ -40,9 +40,10 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .wrap(error_handlers)
             .service(
-                web::resource("/persons")
-                    .route(web::get().to(api::index))
-                    .route(web::post().to(api::add_user)),
+                web::scope("/persons")
+                    .route("", web::get().to(api::index))
+                    .route("", web::post().to(api::add_user))
+                    .route("/{id}", web::delete().to(api::delete_user)),
             )
             .service(Files::new("/", "./static/build").index_file("index.html"))
     })

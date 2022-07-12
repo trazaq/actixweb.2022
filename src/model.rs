@@ -38,4 +38,18 @@ impl User {
 
         Ok(vec![user])
     }
+
+    pub async fn delete_user(connection: &SqlitePool, id: String) -> Result<(), sqlx::Error> {
+        let users = sqlx::query!(
+            r#"
+            DELETE FROM users
+            WHERE id = ?;
+            "#,
+            id
+        )
+        .execute(connection)
+        .await?;
+
+        Ok(())
+    }
 }
