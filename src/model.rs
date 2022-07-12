@@ -22,4 +22,20 @@ impl User {
 
         Ok(users)
     }
+
+    pub async fn add_user(connection: &SqlitePool, user: User) -> Result<Vec<User>, sqlx::Error> {
+        let users = sqlx::query!(
+            r#"
+            INSERT INTO users(id, name, phone)
+            values(?, ?, ?);
+            "#,
+            user.id,
+            user.name,
+            user.phone
+        )
+        .fetch_all(connection)
+        .await?;
+
+        Ok(vec![user])
+    }
 }

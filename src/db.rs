@@ -12,3 +12,9 @@ pub async fn init_pool(database_url: &str) -> Result<SqlitePool, sqlx::Error> {
 pub async fn get_all_users(pool: &SqlitePool) -> Result<Vec<User>, &'static str> {
     User::all(pool).await.map_err(|_| "Error retrieving users")
 }
+
+pub async fn add_user(pool: &SqlitePool, user: User) -> Result<Vec<User>, &'static str> {
+    User::add_user(pool, user)
+        .await
+        .map_err(|_| "Error adding user")
+}
