@@ -1,6 +1,6 @@
 use actix_files::NamedFile;
 use actix_web::{
-    dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Responder, Result,
+    dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result,
 };
 use sqlx::SqlitePool;
 
@@ -31,7 +31,7 @@ pub async fn delete_user(
     path: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let id = path.into_inner();
-    let _deleted = db::delete_user(&pool, id)
+    db::delete_user(&pool, id)
         .await
         .map_err(error::ErrorInternalServerError)?;
 

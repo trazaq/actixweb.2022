@@ -24,7 +24,7 @@ impl User {
     }
 
     pub async fn add_user(connection: &SqlitePool, user: User) -> Result<Vec<User>, sqlx::Error> {
-        let users = sqlx::query!(
+        let _users = sqlx::query!(
             r#"
             INSERT INTO users(id, name, phone)
             values(?, ?, ?);
@@ -40,7 +40,7 @@ impl User {
     }
 
     pub async fn delete_user(connection: &SqlitePool, id: String) -> Result<(), sqlx::Error> {
-        let users = sqlx::query!(
+        let _users = sqlx::query!(
             r#"
             DELETE FROM users
             WHERE id = ?;
