@@ -1,0 +1,1 @@
+web: ./target/release/fullstack_backend
