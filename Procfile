@@ -1,1 +1,1 @@
-web: ./target/release/fullstack_backend
+web: ./target/release/fullstack_backend -p 8082
