@@ -1,7 +1,5 @@
 use actix_files::NamedFile;
-use actix_web::{
-    dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result,
-};
+use actix_web::{dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result};
 use sqlx::SqlitePool;
 
 use crate::db;

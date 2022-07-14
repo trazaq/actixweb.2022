@@ -23,7 +23,12 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to create pool");
 
-    log::info!("starting HTTP server at http://localhost:8082");
+    let port = std::env::var("PORT")
+        .expect("ENV PORT NOT SET")
+        .parse::<u16>()
+        .expect("COULD NOT PARSE PORT");
+
+    log::info!("starting HTTP server at http://localhost:{}", port);
 
     HttpServer::new(move || {
         let error_handlers = ErrorHandlers::new()
@@ -47,7 +52,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(Files::new("/", "./static/build").index_file("index.html"))
     })
-    .bind(("0.0.0.0", std::env::var("PORT")))?
+    .bind(("0.0.0.0", port))?
     .run()
     .await
 }
