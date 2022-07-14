@@ -47,7 +47,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(Files::new("/", "./static/build").index_file("index.html"))
     })
-    .bind(("0.0.0.0", 8082))?
+    .bind(("0.0.0.0", std::env::var("PORT")))?
     .run()
     .await
 }
