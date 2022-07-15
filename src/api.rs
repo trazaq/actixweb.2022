@@ -1,19 +1,25 @@
 use actix_files::NamedFile;
 use actix_web::{dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result};
 use sqlx::SqlitePool;
+use std::ops::Deref;
 
-use crate::db;
 use crate::model::User;
+use crate::{db, AppState};
 
-pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
+/*pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let users = db::get_all_users(&pool)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
     Ok(HttpResponse::Ok().json(users))
+}*/
+
+pub async fn index(entries: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let entries = entries.phonebook_entries.lock().unwrap(); // <- get phonebook_entries MutexGuard
+    Ok(HttpResponse::Ok().json(entries.deref()))
 }
 
-pub async fn add_user(
+/*pub async fn add_user(
     pool: web::Data<SqlitePool>,
     user: web::Json<User>,
 ) -> Result<HttpResponse, Error> {
@@ -22,9 +28,19 @@ pub async fn add_user(
         .map_err(error::ErrorInternalServerError)?;
 
     Ok(HttpResponse::Ok().json(users))
+}*/
+
+pub async fn add_user(
+    entries: web::Data<AppState>,
+    user: web::Json<User>,
+) -> Result<HttpResponse, Error> {
+    let mut entries = entries.phonebook_entries.lock().unwrap(); // <- get phonebook_entries MutexGuard
+    entries.push(user.clone());
+
+    Ok(HttpResponse::Ok().json(user.into_inner()))
 }
 
-pub async fn delete_user(
+/*pub async fn delete_user(
     pool: web::Data<SqlitePool>,
     path: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
@@ -33,6 +49,26 @@ pub async fn delete_user(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
+    Ok(HttpResponse::Ok().finish())
+}
+*/
+
+pub async fn delete_user(
+    entries: web::Data<AppState>,
+    path: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let mut entries = entries.phonebook_entries.lock().unwrap(); // <- get phonebook_entries MutexGuard
+    let id = path.into_inner();
+    let index =
+        entries
+            .iter()
+            .position(|user| user.id == id)
+            .ok_or_else(|| error::ErrorInternalServerError(
+                "Couldn't find entry to delete",
+            ));
+    if let Ok(i) = index {
+        entries.remove(i);
+    }
     Ok(HttpResponse::Ok().finish())
 }
 

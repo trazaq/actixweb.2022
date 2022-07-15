@@ -2,15 +2,22 @@ mod api;
 mod db;
 mod model;
 
+use crate::model::User;
 use actix_files::Files;
 use actix_web::middleware::{ErrorHandlers, Logger};
 use actix_web::{get, http, middleware, web, App, HttpServer, Responder};
 use dotenv::dotenv;
 use std::env;
+use std::sync::Mutex;
 
 #[get("/persons")]
 async fn greet() -> impl Responder {
     actix_files::NamedFile::open_async("./db.json").await
+}
+
+#[derive(Debug)]
+pub struct AppState {
+    phonebook_entries: Mutex<Vec<User>>,
 }
 
 #[actix_web::main] // or #[tokio::main]
@@ -22,6 +29,16 @@ async fn main() -> std::io::Result<()> {
     let pool = db::init_pool(&database_url)
         .await
         .expect("Failed to create pool");
+
+    // Note: web::Data created _outside_ HttpServer::new closure
+    let entries = web::Data::new(AppState {
+        phonebook_entries: Mutex::new(
+            db::get_all_users(&pool)
+                .await
+                .expect("Error Setting AppData Users"),
+        ),
+    });
+    //log::info!("{:#?}", entries);
 
     let port = std::env::var("PORT")
         .expect("ENV PORT NOT SET")
@@ -43,6 +60,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Compress::default())
             .wrap(Logger::default())
             .app_data(web::Data::new(pool.clone()))
+            .app_data(entries.clone())
             .wrap(error_handlers)
             .service(
                 web::scope("/persons")
