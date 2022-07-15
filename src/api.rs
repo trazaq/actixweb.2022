@@ -1,10 +1,12 @@
 use actix_files::NamedFile;
-use actix_web::{dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result};
+use actix_web::{dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result, http, ResponseError};
 use sqlx::SqlitePool;
 use std::ops::Deref;
+use actix_web::http::StatusCode;
+use log::log;
 
 use crate::model::User;
-use crate::{db, AppState};
+use crate::{db, AppState, api};
 
 /*pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let users = db::get_all_users(&pool)
@@ -36,7 +38,7 @@ pub async fn add_user(
 ) -> Result<HttpResponse, Error> {
     let mut entries = entries.phonebook_entries.lock().unwrap(); // <- get phonebook_entries MutexGuard
     entries.push(user.clone());
-
+    log::info!("User Added: {:#?}", user);
     Ok(HttpResponse::Ok().json(user.into_inner()))
 }
 
@@ -66,8 +68,12 @@ pub async fn delete_user(
             .ok_or_else(|| error::ErrorInternalServerError(
                 "Couldn't find entry to delete",
             ));
+    //log::info!("Usize: {:#?}", index);
     if let Ok(i) = index {
+        log::info!("User Removed: {:#?}", entries[i]);
         entries.remove(i);
+    } else {
+         return Ok(HttpResponse::NotFound().body("No Entry Found"))
     }
     Ok(HttpResponse::Ok().finish())
 }
