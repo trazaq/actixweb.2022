@@ -1,12 +1,15 @@
 use actix_files::NamedFile;
-use actix_web::{dev, error, middleware::ErrorHandlerResponse, web, Error, HttpResponse, Result, http, ResponseError};
-use sqlx::SqlitePool;
-use std::ops::Deref;
-use actix_web::http::StatusCode;
-use log::log;
+use actix_web::http::header::{ETag, EntityTag};
+use actix_web::http::{header, StatusCode};
+use actix_web::{
+    dev, error, middleware::ErrorHandlerResponse, web, Error, HttpRequest, HttpResponse, Result,
+};
+use etag::EntityTag as OtherEntityTag;
+use rayon::prelude::*;
+
 
 use crate::model::User;
-use crate::{db, AppState, api};
+use crate::AppState;
 
 /*pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let users = db::get_all_users(&pool)
@@ -16,9 +19,48 @@ use crate::{db, AppState, api};
     Ok(HttpResponse::Ok().json(users))
 }*/
 
-pub async fn index(entries: web::Data<AppState>) -> Result<HttpResponse, Error> {
-    let entries = entries.phonebook_entries.lock().unwrap(); // <- get phonebook_entries MutexGuard
-    Ok(HttpResponse::Ok().json(entries.deref()))
+pub async fn index(req: HttpRequest, entries: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    log::debug!("{:#?}", req.headers());
+    let contents = entries.phonebook_entries.read().unwrap();
+    //dereference instead of making a clone, so it's a copy type
+    //actix won't respond if you don't clone or copy because you're reading it in the if condition below,
+    //then trying to modify it in the body. it compiles, but hangs
+    let is_modified = *entries.is_modified.read().unwrap();
+
+    // First check if the content has changed and if so, calculate the new etag and update the shared state's etag to it
+    if is_modified {
+        let updated = OtherEntityTag::from_data(
+            contents
+                .par_iter()
+                .map(|v| serde_json::to_string(v).unwrap())
+                .collect::<Vec<String>>()
+                .join("")
+                .as_ref(),
+        );
+        *entries.etag.write().unwrap() = updated;
+        *entries.is_modified.write().unwrap() = false; //reset to false
+    };
+
+    let tag = entries.etag.read().unwrap();
+    log::debug!("Tag {:#?}", tag.to_string());
+
+    // If there's a if-none-match header value and it matches the etag calculation of the above data,
+    // the return a 304 response. Under other circumstances return a regular 200 response with the contents.
+    // This is to save bandwidth, but may become problematic if the data is too large?
+    if let Some(etag) = req.headers().get(header::IF_NONE_MATCH) {
+        return match etag.to_str() {
+            Ok(etag) if etag == tag.to_string() => {
+                Ok(HttpResponse::Ok().status(StatusCode::NOT_MODIFIED).finish())
+            }
+            _ => Ok(HttpResponse::Ok()
+                .insert_header(ETag(EntityTag::new_strong(tag.tag().into())))
+                .json(&*contents)),
+        };
+    } else {
+        Ok(HttpResponse::Ok()
+            .insert_header(ETag(EntityTag::new_strong(tag.tag().into())))
+            .json(&*contents))
+    }
 }
 
 /*pub async fn add_user(
@@ -36,9 +78,11 @@ pub async fn add_user(
     entries: web::Data<AppState>,
     user: web::Json<User>,
 ) -> Result<HttpResponse, Error> {
-    let mut entries = entries.phonebook_entries.lock().unwrap(); // <- get phonebook_entries MutexGuard
-    entries.push(user.clone());
+    let mut users = entries.phonebook_entries.write().unwrap(); // <- get phonebook_entries
+    users.push(user.clone());
     log::info!("User Added: {:#?}", user);
+    *entries.is_modified.write().unwrap() = true; //to let the index func know to calculate the etag since content has changed
+
     Ok(HttpResponse::Ok().json(user.into_inner()))
 }
 
@@ -59,21 +103,19 @@ pub async fn delete_user(
     entries: web::Data<AppState>,
     path: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
-    let mut entries = entries.phonebook_entries.lock().unwrap(); // <- get phonebook_entries MutexGuard
+    let mut users = entries.phonebook_entries.write().unwrap(); // <- get phonebook_entries
     let id = path.into_inner();
-    let index =
-        entries
-            .iter()
-            .position(|user| user.id == id)
-            .ok_or_else(|| error::ErrorInternalServerError(
-                "Couldn't find entry to delete",
-            ));
-    //log::info!("Usize: {:#?}", index);
+    let index = users
+        .iter()
+        .position(|user| user.id == id)
+        .ok_or_else(|| error::ErrorInternalServerError("Couldn't find entry to delete"));
+
     if let Ok(i) = index {
-        log::info!("User Removed: {:#?}", entries[i]);
-        entries.remove(i);
+        users.swap_remove(i); //swap_remove if order is not important
+        log::info!("User Removed: {:#?}", users[i]);
+        *entries.is_modified.write().unwrap() = true; //to let the index func know to calculate the etag since content has changed
     } else {
-         return Ok(HttpResponse::NotFound().body("No Entry Found"))
+        return Ok(HttpResponse::NotFound().body("No Entry Found"));
     }
     Ok(HttpResponse::Ok().finish())
 }
@@ -154,7 +196,7 @@ fn redirect_to(location: &str) -> HttpResponse {
         .finish()
 }
 */
-pub fn bad_request<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+pub fn _bad_request<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
     let new_resp = NamedFile::open("static/errors/400.html")?
         .set_status_code(res.status())
         .into_response(res.request())
@@ -162,7 +204,7 @@ pub fn bad_request<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerRespon
     Ok(ErrorHandlerResponse::Response(res.into_response(new_resp)))
 }
 
-pub fn not_found<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+pub fn _not_found<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
     let new_resp = NamedFile::open("static/errors/404.html")?
         .set_status_code(res.status())
         .into_response(res.request())
@@ -170,7 +212,7 @@ pub fn not_found<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse
     Ok(ErrorHandlerResponse::Response(res.into_response(new_resp)))
 }
 
-pub fn internal_server_error<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+pub fn _internal_server_error<B>(res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
     let new_resp = NamedFile::open("static/errors/500.html")?
         .set_status_code(res.status())
         .into_response(res.request())

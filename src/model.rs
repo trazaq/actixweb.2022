@@ -10,7 +10,7 @@ pub struct User {
 
 impl User {
     pub async fn all(connection: &SqlitePool) -> Result<Vec<User>, sqlx::Error> {
-        let users = sqlx::query_as!(
+        let users: Vec<User> = sqlx::query_as!(
             User,
             r#"
             SELECT *
