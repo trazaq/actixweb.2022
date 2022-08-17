@@ -17,6 +17,7 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to create pool");
 
+    //Create the table if it doesn't exist
     pool.get()
         .unwrap()
         .execute(r#"CREATE TABLE IF NOT EXISTS users (id TEXT, name TEXT, phone TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);"#, [])
