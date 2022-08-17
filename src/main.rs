@@ -17,6 +17,11 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to create pool");
 
+    pool.get()
+        .unwrap()
+        .execute(r#"CREATE TABLE IF NOT EXISTS users (id TEXT, name TEXT, phone TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);"#, [])
+        .expect("Error Creating Table");
+
     // Note: web::Data created _outside_ HttpServer::new closure
     let entries = web::Data::new(AppState {
         phonebook_entries: RwLock::new(
