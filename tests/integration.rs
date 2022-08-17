@@ -5,6 +5,7 @@ use fullstack_backend::appstate::AppState;
 use fullstack_backend::model::User;
 use serde_json::json;
 use std::sync::RwLock;
+use pretty_assertions::{assert_eq, assert_ne};
 
 #[actix_web::test]
 async fn test_index_ok() {

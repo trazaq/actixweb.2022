@@ -1,9 +1,9 @@
 use actix_files::Files;
 use actix_web::middleware::Logger;
-use actix_web::{get, middleware, web, App, HttpServer, Responder};
+use actix_web::{middleware, web, App, HttpServer};
 use dotenv::dotenv;
 use etag::EntityTag;
-use fullstack_backend::{api, appstate::AppState, db, model::User};
+use fullstack_backend::{api, appstate::AppState, db};
 use std::env;
 use std::sync::RwLock;
 
