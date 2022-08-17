@@ -1,18 +1,21 @@
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-
 use crate::model::User;
+use r2d2::Pool;
+use r2d2_sqlite::rusqlite::Error;
+use r2d2_sqlite::SqliteConnectionManager;
 
-pub async fn init_pool(database_url: &str) -> Result<SqlitePool, sqlx::Error> {
-    SqlitePoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_secs(5))
-        .connect(database_url)
-        .await
+pub async fn init_pool(database_url: &str) -> Result<Pool<SqliteConnectionManager>, Error> {
+    let manager = SqliteConnectionManager::file(database_url);
+    let pool = r2d2::Pool::builder().max_size(10).build(manager).unwrap();
+    Ok(pool)
 }
 
-pub async fn get_all_users(pool: &SqlitePool) -> Result<Vec<User>, &'static str> {
+pub async fn get_all_users(
+    pool: &Pool<SqliteConnectionManager>,
+) -> Result<Vec<User>, &'static str> {
     User::all(pool).await.map_err(|_| "Error retrieving users")
 }
 
+/*
 pub async fn add_user(pool: &SqlitePool, user: User) -> Result<Vec<User>, &'static str> {
     User::add_user(pool, user)
         .await
@@ -24,3 +27,4 @@ pub async fn delete_user(pool: &SqlitePool, id: String) -> Result<(), &'static s
         .await
         .map_err(|_| "Error adding user")
 }
+*/

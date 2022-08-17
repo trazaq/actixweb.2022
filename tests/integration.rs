@@ -3,9 +3,9 @@ use etag::EntityTag;
 use fullstack_backend::api::{add_user, index};
 use fullstack_backend::appstate::AppState;
 use fullstack_backend::model::User;
+use pretty_assertions::{assert_eq, assert_ne};
 use serde_json::json;
 use std::sync::RwLock;
-use pretty_assertions::{assert_eq, assert_ne};
 
 #[actix_web::test]
 async fn test_index_ok() {
