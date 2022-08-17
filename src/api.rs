@@ -1,3 +1,4 @@
+use crate::appstate::AppState;
 use actix_files::NamedFile;
 use actix_web::http::header::{ETag, EntityTag};
 use actix_web::http::{header, StatusCode};
@@ -6,10 +7,7 @@ use actix_web::{
 };
 use etag::EntityTag as OtherEntityTag;
 use rayon::prelude::*;
-
-
 use crate::model::User;
-use crate::AppState;
 
 /*pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let users = db::get_all_users(&pool)
