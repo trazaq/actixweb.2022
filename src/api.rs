@@ -109,8 +109,9 @@ pub async fn delete_user(
         .ok_or_else(|| error::ErrorInternalServerError("Couldn't find entry to delete"));
 
     if let Ok(i) = index {
+        let user = users[i].clone();
         users.swap_remove(i); //swap_remove if order is not important
-        log::info!("User Removed: {:#?}", users[i]);
+        log::info!("User Removed: {:#?}", user);
         *entries.is_modified.write().unwrap() = true; //to let the index func know to calculate the etag since content has changed
     } else {
         return Ok(HttpResponse::NotFound().body("No Entry Found"));
