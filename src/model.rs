@@ -57,10 +57,7 @@ impl User {
         }
     }
 
-    pub async fn delete_user(
-        pool: &Pool<SqliteConnectionManager>,
-        id: String,
-    ) -> Result<(), Error> {
+    pub async fn delete_user(pool: &Pool<SqliteConnectionManager>, id: &str) -> Result<(), Error> {
         let conn = pool.get().expect("Error getting Connection From Pool");
         let mut stmt = conn
             .prepare(r#"DELETE FROM users WHERE id = ?;"#)

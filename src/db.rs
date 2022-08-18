@@ -26,7 +26,7 @@ pub async fn add_user(
 
 pub async fn delete_user(
     pool: &Pool<SqliteConnectionManager>,
-    id: String,
+    id: &str,
 ) -> Result<(), &'static str> {
     User::delete_user(pool, id)
         .await

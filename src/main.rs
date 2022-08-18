@@ -24,16 +24,11 @@ async fn main() -> std::io::Result<()> {
         .expect("Error Creating Table");
 
     // Note: web::Data created _outside_ HttpServer::new closure
-    let entries = web::Data::new(AppState {
-        phonebook_entries: RwLock::new(
-            db::get_all_users(&pool)
-                .await
-                .expect("Error Setting AppData Users"),
-        ),
+    let state = web::Data::new(AppState {
         is_modified: RwLock::from(true),
         etag: RwLock::new(EntityTag::strong("")),
     });
-    log::debug!("{:#?}", entries);
+    log::debug!("{:#?}", state);
 
     let port = std::env::var("PORT")
         .unwrap_or_else(|_| "8082".to_owned())
@@ -55,7 +50,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Compress::default())
             .wrap(Logger::default())
             .app_data(web::Data::new(pool.clone()))
-            .app_data(entries.clone())
+            .app_data(state.clone())
             //.wrap(error_handlers)
             .service(
                 web::scope("/persons")

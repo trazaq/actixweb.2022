@@ -1,4 +1,5 @@
 use crate::appstate::AppState;
+use crate::db;
 use crate::model::User;
 use actix_files::NamedFile;
 use actix_web::http::header::{ETag, EntityTag};
@@ -7,7 +8,10 @@ use actix_web::{
     dev, error, middleware::ErrorHandlerResponse, web, Error, HttpRequest, HttpResponse, Result,
 };
 use etag::EntityTag as OtherEntityTag;
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
 use rayon::prelude::*;
+use serde_json::json;
 
 /*pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let users = db::get_all_users(&pool)
@@ -17,29 +21,33 @@ use rayon::prelude::*;
     Ok(HttpResponse::Ok().json(users))
 }*/
 
-pub async fn index(req: HttpRequest, entries: web::Data<AppState>) -> Result<HttpResponse, Error> {
+pub async fn index(
+    req: HttpRequest,
+    state: web::Data<AppState>,
+    pool: web::Data<Pool<SqliteConnectionManager>>,
+) -> Result<HttpResponse, Error> {
     log::debug!("{:#?}", req.headers());
-    let contents = entries.phonebook_entries.read().unwrap();
+    let users = db::get_all_users(&pool).await.unwrap();
     //dereference instead of making a clone, so it's a copy type
     //actix won't respond if you don't clone or copy because you're reading it in the if condition below,
     //then trying to modify it in the body. it compiles, but hangs
-    let is_modified = *entries.is_modified.read().unwrap();
+    let is_modified = *state.is_modified.read().unwrap();
 
     // First check if the content has changed and if so, calculate the new etag and update the shared state's etag to it
     if is_modified {
         let updated = OtherEntityTag::from_data(
-            contents
+            users
                 .par_iter()
                 .map(|v| serde_json::to_string(v).unwrap())
                 .collect::<Vec<String>>()
                 .join("")
                 .as_ref(),
         );
-        *entries.etag.write().unwrap() = updated;
-        *entries.is_modified.write().unwrap() = false; //reset to false
+        *state.etag.write().unwrap() = updated;
+        *state.is_modified.write().unwrap() = false; //reset to false
     };
 
-    let tag = entries.etag.read().unwrap();
+    let tag = state.etag.read().unwrap();
     log::debug!("Tag {:#?}", tag.to_string());
 
     // If there's a if-none-match header value and it matches the etag calculation of the above data,
@@ -52,12 +60,12 @@ pub async fn index(req: HttpRequest, entries: web::Data<AppState>) -> Result<Htt
             }
             _ => Ok(HttpResponse::Ok()
                 .insert_header(ETag(EntityTag::new_strong(tag.tag().into())))
-                .json(&*contents)),
+                .json(users)),
         };
     } else {
         Ok(HttpResponse::Ok()
             .insert_header(ETag(EntityTag::new_strong(tag.tag().into())))
-            .json(&*contents))
+            .json(users))
     }
 }
 
@@ -73,15 +81,18 @@ pub async fn index(req: HttpRequest, entries: web::Data<AppState>) -> Result<Htt
 }*/
 
 pub async fn add_user(
-    entries: web::Data<AppState>,
+    state: web::Data<AppState>,
     user: web::Json<User>,
+    pool: web::Data<Pool<SqliteConnectionManager>>,
 ) -> Result<HttpResponse, Error> {
-    let mut users = entries.phonebook_entries.write().unwrap(); // <- get phonebook_entries
-    users.push(user.clone());
-    log::info!("User Added: {:#?}", user);
-    *entries.is_modified.write().unwrap() = true; //to let the index func know to calculate the etag since content has changed
-
-    Ok(HttpResponse::Ok().json(user.into_inner()))
+    match db::add_user(&pool, user.into_inner()).await {
+        Ok(u) => {
+            log::info!("User Added: {:#?}", u);
+            *state.is_modified.write().unwrap() = true; //to let the index func know to calculate the etag since content has changed
+            Ok(HttpResponse::Ok().json(u))
+        }
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
+    }
 }
 
 /*pub async fn delete_user(
@@ -98,21 +109,14 @@ pub async fn add_user(
 */
 
 pub async fn delete_user(
-    entries: web::Data<AppState>,
+    state: web::Data<AppState>,
     path: web::Path<String>,
+    pool: web::Data<Pool<SqliteConnectionManager>>,
 ) -> Result<HttpResponse, Error> {
-    let mut users = entries.phonebook_entries.write().unwrap(); // <- get phonebook_entries
     let id = path.into_inner();
-    let index = users
-        .iter()
-        .position(|user| user.id == id)
-        .ok_or_else(|| error::ErrorInternalServerError("Couldn't find entry to delete"));
-
-    if let Ok(i) = index {
-        let user = users[i].clone();
-        users.swap_remove(i); //swap_remove if order is not important
-        log::info!("User Removed: {:#?}", user);
-        *entries.is_modified.write().unwrap() = true; //to let the index func know to calculate the etag since content has changed
+    if let Ok(()) = db::delete_user(&pool, &id).await {
+        log::info!("User w/ ID {:#?} Deleted", id);
+        *state.is_modified.write().unwrap() = true; //to let the index func know to calculate the etag since content has changed
     } else {
         return Ok(HttpResponse::NotFound().body("No Entry Found"));
     }
