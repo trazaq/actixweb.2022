@@ -14,7 +14,7 @@ use std::sync::RwLock;
 async fn test_index_ok() {
     dotenv().ok();
 
-    let database_url = env::var("DATABASE_URL_DEV").expect("DATABASE_URL must be set");
+    let database_url = env::var("DATABASE_URL_TESTING").expect("DATABASE_URL must be set");
     let pool = db::init_pool(&database_url)
         .await
         .expect("Failed to create pool");
