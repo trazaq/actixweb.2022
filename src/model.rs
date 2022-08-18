@@ -26,14 +26,14 @@ impl User {
         })?;
 
         if let Some(size) = users.size_hint().1 {
-            log::info!("Size hint: {}", size);
+            log::debug!("Size hint: {}", size);
             let mut result = Vec::with_capacity(size);
             for user in users {
                 result.push(user?);
             }
             Ok(result)
         } else {
-            log::info!("No size Hint");
+            log::debug!("No size Hint");
             let mut result = Vec::new();
             for user in users {
                 result.push(user?);
