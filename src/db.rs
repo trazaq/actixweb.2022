@@ -18,7 +18,7 @@ pub async fn get_all_users(
 pub async fn add_user(
     pool: &Pool<SqliteConnectionManager>,
     user: User,
-) -> Result<Vec<User>, &'static str> {
+) -> Result<User, &'static str> {
     User::add_user(pool, user)
         .await
         .map_err(|_| "Error adding user")

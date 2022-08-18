@@ -1,4 +1,3 @@
-use crate::model::User;
 use etag::EntityTag;
 use std::sync::RwLock;
 

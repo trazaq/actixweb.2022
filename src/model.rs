@@ -1,4 +1,3 @@
-use actix_web::http::header::q;
 use r2d2::Pool;
 use r2d2_sqlite::rusqlite::Error;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -43,16 +42,13 @@ impl User {
         }
     }
 
-    pub async fn add_user(
-        pool: &Pool<SqliteConnectionManager>,
-        user: User,
-    ) -> Result<Vec<User>, Error> {
+    pub async fn add_user(pool: &Pool<SqliteConnectionManager>, user: User) -> Result<User, Error> {
         let conn = pool.get().expect("Error getting Connection From Pool");
         let mut stmt = conn
             .prepare(r#"INSERT INTO users (id, name, phone) VALUES (?1, ?2, ?3);"#)
             .expect("Error Preparing SQL Statement");
         match stmt.execute(&[&user.id, &user.name, &user.phone]) {
-            Ok(_) => Ok(vec![user]),
+            Ok(_) => Ok(user),
             Err(e) => Err(e),
         }
     }

@@ -5,13 +5,12 @@ use actix_files::NamedFile;
 use actix_web::http::header::{ETag, EntityTag};
 use actix_web::http::{header, StatusCode};
 use actix_web::{
-    dev, error, middleware::ErrorHandlerResponse, web, Error, HttpRequest, HttpResponse, Result,
+    dev, middleware::ErrorHandlerResponse, web, Error, HttpRequest, HttpResponse, Result,
 };
 use etag::EntityTag as OtherEntityTag;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rayon::prelude::*;
-use serde_json::json;
 
 /*pub async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let users = db::get_all_users(&pool)
